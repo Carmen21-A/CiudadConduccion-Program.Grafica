@@ -1,6 +1,17 @@
 package com.graphics; // Reúne la versión final con las otras tres lecciones.
 
 import static org.lwjgl.glfw.GLFW.*; // Permite consultar la tecla que controla el minimapa.
+import static org.lwjgl.opengl.GL11.GL_COLOR_BUFFER_BIT;
+import static org.lwjgl.opengl.GL11.GL_DEPTH_BUFFER_BIT;
+import static org.lwjgl.opengl.GL11.GL_NO_ERROR;
+import static org.lwjgl.opengl.GL11.GL_SCISSOR_TEST;
+import static org.lwjgl.opengl.GL11.glClear;
+import static org.lwjgl.opengl.GL11.glClearColor;
+import static org.lwjgl.opengl.GL11.glDisable;
+import static org.lwjgl.opengl.GL11.glEnable;
+import static org.lwjgl.opengl.GL11.glGetError;
+import static org.lwjgl.opengl.GL11.glScissor;
+import static org.lwjgl.opengl.GL11.glViewport;
 import static org.lwjgl.opengl.GL33.*; // Permite cambiar viewport, recorte y buffers de dibujo.
 
 /**
@@ -170,6 +181,7 @@ public class clase4 extends clase3 {
         }
         for (float y = 1.7f; y < altura; y += 2) { // Recorre los pisos separados por dos unidades de altura.
             for (float desplazamiento = -2; desplazamiento <= 2; desplazamiento += 2) { // Coloca tres ventanas por fachada.
+           //for (float desplazamiento = -1.5f; desplazamiento <= 1.5f; desplazamiento += 3) { // Coloca dos ventanas por fachada.    
                 caja(x + desplazamiento, y, z - 3.51f, 0.8f, 0.9f, 0.04f, rojo, verde, azul); // Ventana de la fachada norte.
                 caja(x + desplazamiento, y, z + 3.51f, 0.8f, 0.9f, 0.04f, rojo, verde, azul); // Ventana de la fachada sur.
                 caja(x - 3.51f, y, z + desplazamiento, 0.04f, 0.9f, 0.8f, rojo, verde, azul); // Ventana de la fachada oeste.

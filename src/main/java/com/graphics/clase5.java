@@ -156,7 +156,10 @@ public class clase5 extends clase4 {
         }
     }
 
-    protected Peaton peaton; // Peatón que recorre las aceras y cruza con el semáforo en rojo para los autos.
+//===============AQUI SE DECLARAN LOS PEATONES (SOPORTA 1, 2, 3 O MAS)==========
+    protected Peaton peaton; // Mantiene compatibilidad con el primer peatón y con las pruebas.
+    protected List<Peaton> peatones = new ArrayList<>(); // Lista para múltiples personas autónomas.
+//======
     protected float avionX; // Posición X del avión; vuela de este (+X) a oeste (-X).
     protected float avionZ; // Calle imaginaria (Z) por la que pasa en esta vuelta.
     private int pasadasAvion = 0; // Cuenta las pasadas para variar la trayectoria.
@@ -172,14 +175,26 @@ public class clase5 extends clase4 {
         crearPeatonYAvion(); // Coloca al peatón y al avión en su punto de partida.
     }
 
-    /** Coloca al peatón junto a la salida del jugador y al avión fuera de la ciudad, por el este. */
+//===============AQUI SE CREAN E INICIALIZAN LOS PEATONES==========
     protected void crearPeatonYAvion() {
-        peaton = new Peaton(MAPA.length - 2, 1, 7, 7); // Manzana suroeste, acceso oeste: visible desde la salida.
+        peatones.clear(); // Limpia la lista al iniciar o reiniciar.
+
+        // PEATÓN 1 (Activo actualmente): Manzana suroeste, acceso oeste: visible desde la salida.
+        peaton = new Peaton(MAPA.length - 2, 1, 7, 7);
+        peatones.add(peaton);
+
+        // --- EN EL FUTURO: SOLO DESCOMENTA O AGREGA AQUI LAS PERSONAS QUE QUIERAS ---
+        // peatones.add(new Peaton(1, 1, 1, 15));               // Peatón 2: Manzana noroeste
+        // peatones.add(new Peaton(1, MAPA.length - 2, 3, 27)); // Peatón 3: Manzana noreste
+        // peatones.add(new Peaton(MAPA.length - 2, MAPA.length - 2, 5, 33)); // Peatón 4: Manzana sureste
+        // peatones.add(new Peaton(3, 3, 0, 42));               // Peatón 5: Manzana central
+
         pasadasAvion = 0; // Primera pasada.
         tiempoAvion = 0; // La primera pasada empieza de inmediato.
         avionX = LIMITE + 40; // Empieza fuera del mapa, al este.
         avionZ = CARRILES_AVION[0]; // Primera trayectoria.
     }
+//======
 
     /** Coloca cada vehículo autónomo al inicio de su ruta. */
     protected void crearTrafico() {
@@ -262,7 +277,11 @@ public class clase5 extends clase4 {
         super.actualizar(deltaTime); // Conduce el auto, comprueba entregas y actualiza el título.
         recorrido += Math.abs(velocidad) * deltaTime; // Distancia recorrida para el vaivén de la cámara.
         actualizarTrafico(deltaTime); // Mueve los vehículos autónomos.
-        peaton.actualizar(deltaTime, this::cicloSemaforo, this::autoEn); // Camina, respeta semáforos y no atraviesa autos.
+//===============AQUI SE ACTUALIZAN TODOS LOS PEATONES AUTONOMOS==========
+        for (Peaton p : peatones) {
+            p.actualizar(deltaTime, this::cicloSemaforo, this::autoEn); // Cada peatón camina, respeta semáforos y autos.
+        }
+//======
         actualizarAvion(deltaTime); // Mueve el avión.
     }
 
@@ -314,9 +333,11 @@ public class clase5 extends clase4 {
             if (debeFrenarPorSemaforo(vehiculo)) { // El próximo cruce tiene el semáforo en rojo (o amarillo con tiempo para frenar).
                 detener[i] = true; // Se detiene antes del paso peatonal.
             }
-            if (peaton != null && peatonDelante(vehiculo)) { // Hay un peatón cruzando delante.
+//===============AQUI EL TRAFICO DETECTA SI ALGUN PEATON CRUZA DELANTE==========
+            if (peatonDelante(vehiculo)) { // Cede el paso si cualquiera de los peatones está cruzando delante.
                 detener[i] = true; // Le cede el paso.
             }
+//======
             for (int j = 0; j < cantidad; j++) { // Compara con los demás vehículos.
                 VehiculoAutonomo otro = trafico.get(j); // Posible obstáculo.
                 if (i == j || !vehiculo.tieneDelante(otro.x, otro.z, 6, 2.2f)) { // Ignora a sí mismo y a los que no tiene delante.
@@ -366,14 +387,21 @@ public class clase5 extends clase4 {
         return false; // Ningún semáforo le obliga a frenar.
     }
 
-    /** Indica si el peatón está delante del morro del vehículo (no a su costado). */
+//===============AQUI SE REVISA SI CUALQUIER PEATON ESTA DELANTE DE UN AUTO==========
+    /** Indica si algún peatón de la ciudad está delante del morro del vehículo (no a su costado). */
     private boolean peatonDelante(VehiculoAutonomo vehiculo) {
-        float dx = peaton.x - vehiculo.x; // Vector hacia el peatón en X.
-        float dz = peaton.z - vehiculo.z; // Vector hacia el peatón en Z.
-        float adelante = dx * vehiculo.frenteX() + dz * vehiculo.frenteZ(); // Distancia a lo largo de la marcha.
-        float lateral = Math.abs(dx * vehiculo.frenteZ() - dz * vehiculo.frenteX()); // Separación lateral.
-        return adelante > 1.8f && adelante < 7 && lateral < 2.5f; // Delante del morro; si está al costado, el auto puede avanzar y dejarle paso.
+        for (Peaton p : peatones) {
+            float dx = p.x - vehiculo.x; // Vector hacia el peatón en X.
+            float dz = p.z - vehiculo.z; // Vector hacia el peatón en Z.
+            float adelante = dx * vehiculo.frenteX() + dz * vehiculo.frenteZ(); // Distancia a lo largo de la marcha.
+            float lateral = Math.abs(dx * vehiculo.frenteZ() - dz * vehiculo.frenteX()); // Separación lateral.
+            if (adelante > 1.8f && adelante < 7 && lateral < 2.5f) { // Delante del morro.
+                return true; // Encontró al menos un peatón cruzando delante.
+            }
+        }
+        return false;
     }
+//======
 
     /** Indica si un punto cae sobre algún auto (jugador o tráfico), con medio peatón de margen. */
     protected boolean autoEn(float x, float z) {
@@ -416,15 +444,19 @@ public class clase5 extends clase4 {
                 return false; // El choque detiene al jugador, como con las manzanas.
             }
         }
-        if (peaton != null && !peaton.sobreAcera()) { // Sobre la acera el auto nunca lo alcanza: solo importa si está en la calle.
-            float m = 0.35f; // Medio ancho del peatón.
-            float[] persona = {peaton.x - m, peaton.z - m, peaton.x + m, peaton.z - m, peaton.x + m, peaton.z + m, peaton.x - m, peaton.z + m}; // Cuadrado del peatón.
-            float nueva = (float) Math.hypot(x - peaton.x, z - peaton.z); // Distancia en la posición propuesta.
-            float actual = (float) Math.hypot(autoX - peaton.x, autoZ - peaton.z); // Distancia actual.
-            if (seTocan(auto, persona) && nueva < actual) { // El movimiento lo atropellaría.
-                return false; // El auto se detiene.
+//===============AQUI SE VERIFICA LA COLISION DEL JUGADOR CON CUALQUIER PEATON==========
+        for (Peaton p : peatones) {
+            if (!p.sobreAcera()) { // Sobre la acera el auto nunca lo alcanza: solo importa si está en la calle.
+                float m = 0.35f; // Medio ancho del peatón.
+                float[] persona = {p.x - m, p.z - m, p.x + m, p.z - m, p.x + m, p.z + m, p.x - m, p.z + m}; // Cuadrado del peatón.
+                float nueva = (float) Math.hypot(x - p.x, z - p.z); // Distancia en la posición propuesta.
+                float actual = (float) Math.hypot(autoX - p.x, autoZ - p.z); // Distancia actual.
+                if (seTocan(auto, persona) && nueva < actual) { // El movimiento lo atropellaría.
+                    return false; // El auto se detiene.
+                }
             }
         }
+//======
         return true; // No hay obstáculos.
     }
 
@@ -549,24 +581,42 @@ public class clase5 extends clase4 {
         entero("uEmision", 0); // Restablece la iluminación normal.
     }
 
-    /** Dibuja al peatón: piernas que se alternan al caminar, cuerpo, brazos y cabeza. */
+//===============AQUI SE DIBUJAN TODOS LOS PEATONES DE LA CIUDAD==========
+    /** Dibuja a todos los peatones: piernas que se alternan al caminar, cuerpo, brazos y cabeza. */
     private void dibujarPeaton() {
-        Peaton p = peaton; // Nombre corto.
-        if (vistaMapa) { // En el minimapa basta un punto rosado.
-            caja(p.x, 24.5f, p.z, 1.8f, 0.1f, 1.8f, 1, 0.55f, 0.75f); // Marca del peatón.
-            return; // No dibuja el cuerpo.
+        // Paleta de colores para las camisetas (así cada persona luce diferente al agregar más)
+        float[][] coloresCamiseta = {
+            {0.90f, 0.35f, 0.25f}, // Persona 1: Rojo / naranja original
+            {0.20f, 0.60f, 0.90f}, // Persona 2: Celeste
+            {0.30f, 0.80f, 0.35f}, // Persona 3: Verde
+            {0.95f, 0.80f, 0.20f}, // Persona 4: Amarillo
+            {0.70f, 0.35f, 0.85f}  // Persona 5: Morado
+        };
+
+        for (int i = 0; i < peatones.size(); i++) {
+            Peaton p = peatones.get(i);
+            if (p == null) continue;
+
+            if (vistaMapa) { // En el minimapa basta un punto rosado.
+                caja(p.x, 24.5f, p.z, 1.8f, 0.1f, 1.8f, 1, 0.55f, 0.75f); // Marca del peatón.
+                continue; // Pasa al siguiente peatón.
+            }
+
+            float base = p.sobreAcera() ? 0.3f : 0; // Pisa la acera elevada o el asfalto.
+            boolean quieto = p.esperando || p.detenido; // Esperando el semáforo o un auto no mueve las piernas.
+            float balanceo = quieto ? 0 : (float) Math.sin(p.pasos * 4) * 0.22f; // Avance alterno de las piernas.
+            float[] color = coloresCamiseta[i % coloresCamiseta.length];
+
+            piezaEn(p.x, p.z, p.angulo, -0.13f, base + 0.4f, balanceo, 0.18f, 0.8f, 0.2f, 0.15f, 0.17f, 0.30f); // Pierna izquierda.
+            piezaEn(p.x, p.z, p.angulo, 0.13f, base + 0.4f, -balanceo, 0.18f, 0.8f, 0.2f, 0.15f, 0.17f, 0.30f); // Pierna derecha.
+            piezaEn(p.x, p.z, p.angulo, 0, base + 1.1f, 0, 0.5f, 0.65f, 0.3f, color[0], color[1], color[2]); // Camiseta distintiva.
+            piezaEn(p.x, p.z, p.angulo, -0.32f, base + 1.05f, -balanceo, 0.13f, 0.6f, 0.15f, color[0], color[1], color[2]); // Brazo izquierdo.
+            piezaEn(p.x, p.z, p.angulo, 0.32f, base + 1.05f, balanceo, 0.13f, 0.6f, 0.15f, color[0], color[1], color[2]); // Brazo derecho.
+            piezaEn(p.x, p.z, p.angulo, 0, base + 1.62f, 0, 0.32f, 0.34f, 0.32f, 0.92f, 0.75f, 0.60f); // Cabeza.
+            piezaEn(p.x, p.z, p.angulo, 0, base + 1.82f, 0.02f, 0.34f, 0.08f, 0.34f, 0.25f, 0.15f, 0.08f); // Cabello.
         }
-        float base = p.sobreAcera() ? 0.3f : 0; // Pisa la acera elevada o el asfalto.
-        boolean quieto = p.esperando || p.detenido; // Esperando el semáforo o un auto no mueve las piernas.
-        float balanceo = quieto ? 0 : (float) Math.sin(p.pasos * 4) * 0.22f; // Avance alterno de las piernas.
-        piezaEn(p.x, p.z, p.angulo, -0.13f, base + 0.4f, balanceo, 0.18f, 0.8f, 0.2f, 0.15f, 0.17f, 0.30f); // Pierna izquierda.
-        piezaEn(p.x, p.z, p.angulo, 0.13f, base + 0.4f, -balanceo, 0.18f, 0.8f, 0.2f, 0.15f, 0.17f, 0.30f); // Pierna derecha.
-        piezaEn(p.x, p.z, p.angulo, 0, base + 1.1f, 0, 0.5f, 0.65f, 0.3f, 0.90f, 0.35f, 0.25f); // Camiseta.
-        piezaEn(p.x, p.z, p.angulo, -0.32f, base + 1.05f, -balanceo, 0.13f, 0.6f, 0.15f, 0.90f, 0.35f, 0.25f); // Brazo izquierdo.
-        piezaEn(p.x, p.z, p.angulo, 0.32f, base + 1.05f, balanceo, 0.13f, 0.6f, 0.15f, 0.90f, 0.35f, 0.25f); // Brazo derecho.
-        piezaEn(p.x, p.z, p.angulo, 0, base + 1.62f, 0, 0.32f, 0.34f, 0.32f, 0.92f, 0.75f, 0.60f); // Cabeza.
-        piezaEn(p.x, p.z, p.angulo, 0, base + 1.82f, 0.02f, 0.34f, 0.08f, 0.34f, 0.25f, 0.15f, 0.08f); // Cabello.
     }
+//======
 
     /** Dibuja un avión blanco pequeño con la nariz hacia el oeste (-X). */
     private void dibujarAvion() {
